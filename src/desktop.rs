@@ -672,7 +672,7 @@ impl Widget for ImageCarouselWidget {
             if i < images.len() {
                 let tex = &images[i];
                 let g = tex.texture.read().unwrap();
-                sdl::sdl_render_tex(canvas, &g, x1, y);
+                sdl::sdl_render_tex(canvas, &g, x1 + dw as i32 / 2, y);
                 drop(g);
                 if show {
                     if let Some(ref zimage) = zoomed_image {
@@ -687,10 +687,9 @@ impl Widget for ImageCarouselWidget {
                     }
                 }
             }
+            canvas.set_draw_color(color::CYBER_COOL_BLUE.to_sdl_rgba());
             let _ = canvas.draw_rect(Rect::new(x1, sy, dw as u32, h as u32));
         }
-
-        canvas.set_draw_color(color::CYBER_COOL_BLUE.to_sdl_rgba());
     }
 }
 
