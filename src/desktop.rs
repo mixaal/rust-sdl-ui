@@ -770,6 +770,49 @@ impl DroneYawWidget {
     }
 }
 
+pub struct FlightLogWidget {
+    widget: CommonWidgetProps,
+    props: Arc<RwLock<FlightLog>>,
+    texcache: TextureCache,
+}
+
+impl Widget for FlightLogWidget {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+        let (x, y, w, h) = self.widget.compute_dim(canvas);
+
+        let bg = self
+            .texcache
+            .load_texture(
+                canvas,
+                "images/radius-bg.png".to_owned(),
+                w as u32,
+                h as u32,
+                None,
+            )
+            .expect("can't load yaw bg texture");
+
+        bg.render(canvas, x, y);
+    }
+}
+
+impl FlightLogWidget {
+    pub fn new(widget: CommonWidgetProps) -> Self {
+        Self {
+            widget,
+            props: Arc::new(RwLock::new(FlightLog {})),
+            texcache: TextureCache::new(),
+        }
+    }
+
+    pub fn on_window(self, window: &mut Window) -> Arc<RwLock<FlightLog>> {
+        let hz = self.props.clone();
+        window.widgets.push(Box::new(self));
+        hz
+    }
+}
+
+pub struct FlightLog {}
+
 pub struct ImageCarousel {
     image_dir: String,
     number_of_images: usize,

@@ -82,6 +82,10 @@ fn main() {
         desktop::DroneYawWidget::new(CommonWidgetProps::new(&canvas).place(0.35, 0.7).rect(0.12))
             .on_window(&mut win);
 
+    let flight_log =
+        desktop::FlightLogWidget::new(CommonWidgetProps::new(&canvas).place(0.65, 0.7).rect(0.12))
+            .on_window(&mut win);
+
     battery.write().unwrap().set(0.09);
     wifi_strength.write().unwrap().set(0.4);
 
