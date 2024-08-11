@@ -5,11 +5,9 @@ use std::{
 };
 
 use crate::{
-    gfx::{
-        color::{self, RgbColor},
-        sdl::{self},
-        texcache::TextureCache,
-    },
+    color::{self, RgbColor},
+    sdl::{self},
+    texcache::TextureCache,
     utils,
 };
 use sdl2::{
@@ -27,13 +25,28 @@ pub trait Widget {
 }
 pub struct Window {
     widgets: Vec<Box<dyn Widget>>,
+    pub fps: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Window {
-    pub fn new() -> Self {
-        Self {
-            widgets: Vec::new(),
-        }
+    pub fn new(
+        width: u32,
+        height: u32,
+        fps: u32,
+    ) -> (Self, sdl2::EventPump, Canvas<sdl2::video::Window>) {
+        let (event_pump, canvas) = sdl::sdl_init(width, height);
+        (
+            Self {
+                widgets: Vec::new(),
+                width,
+                height,
+                fps,
+            },
+            event_pump,
+            canvas,
+        )
     }
 
     pub fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {

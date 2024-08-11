@@ -1,9 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+pub(crate) mod color;
 pub mod desktop;
 pub mod gamepad;
-pub(crate) mod gfx;
-pub mod ui;
+pub mod sdl;
+pub(crate) mod texcache;
 pub(crate) mod utils;
 pub mod vec;
