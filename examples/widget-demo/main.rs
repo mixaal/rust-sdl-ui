@@ -78,6 +78,10 @@ fn main() {
     )
     .on_window(&mut win);
 
+    let drone_yaw =
+        desktop::DroneYawWidget::new(CommonWidgetProps::new(&canvas).place(0.35, 0.7).rect(0.12))
+            .on_window(&mut win);
+
     battery.write().unwrap().set(0.09);
     wifi_strength.write().unwrap().set(0.4);
 
@@ -85,6 +89,7 @@ fn main() {
     let mut last_state = js.state();
     let mut pitch = 0.0;
     let mut roll = 0.0;
+    let mut angle = 0.0;
     while playing {
         // reset game state
 
@@ -103,6 +108,8 @@ fn main() {
             let st = js.state();
 
             horizon.write().unwrap().set(pitch, roll, 120.0);
+            drone_yaw.write().unwrap().set(angle);
+            angle += 0.1;
 
             if st.a() {
                 light_signal.write().unwrap().now();

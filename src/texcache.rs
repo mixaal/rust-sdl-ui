@@ -5,12 +5,15 @@ use std::{
 
 use sdl2::{
     image::LoadTexture,
-    rect::Rect,
+    pixels::{PixelFormat, PixelFormatEnum},
+    rect::{Point, Rect},
     render::{Canvas, Texture},
     video::Window,
 };
 
 use tracing;
+
+use crate::sdl;
 
 pub(crate) struct TextureCache {
     lookup: HashMap<String, Vec<TexInfo>>,
@@ -83,14 +86,11 @@ impl TextureCache {
         let tc = canvas.texture_creator();
         let src_texture = tc.load_texture(&name)?;
         let original_aspect = src_texture.query().width as f32 / src_texture.query().height as f32;
+        tracing::info!(name, "pixel format: {:?}", src_texture.query().format);
         let mut dst_texture = tc
-            .create_texture(
-                src_texture.query().format,
-                sdl2::render::TextureAccess::Target,
-                w,
-                h,
-            )
+            .create_texture_target(src_texture.query().format, w, h)
             .expect("can't create texture");
+        dst_texture.set_blend_mode(sdl2::render::BlendMode::Blend);
         let dst = Rect::new(0, 0, w, h);
         let result = canvas.with_texture_canvas(&mut dst_texture, |texture_canvas| {
             texture_canvas
@@ -120,5 +120,30 @@ impl TextureCache {
         let tex = tex.unwrap();
 
         return Ok(tex);
+    }
+}
+
+impl TexInfo {
+    pub(crate) fn render(&self, canvas: &mut Canvas<sdl2::video::Window>, x: i32, y: i32) {
+        let g = self.texture.read().unwrap();
+        sdl::sdl_render_tex(canvas, &g, x, y);
+        drop(g);
+    }
+
+    pub(crate) fn render_rot(
+        &self,
+        canvas: &mut Canvas<sdl2::video::Window>,
+        x: i32,
+        y: i32,
+        angle: f32,
+    ) {
+        let g = self.texture.read().unwrap();
+        // tracing::info!("pixel format: {:?}", g.query().format);
+        let dst = Rect::new(x - self.w as i32 / 2, y - self.h as i32 / 2, self.w, self.h);
+        let r = canvas.copy_ex(&g, None, dst, angle as f64, None, false, false);
+        if r.is_err() {
+            tracing::error!("render_rot: {}", r.err().unwrap());
+        }
+        drop(g);
     }
 }

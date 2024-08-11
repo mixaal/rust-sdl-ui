@@ -696,7 +696,7 @@ impl Widget for ImageCarouselWidget {
 impl ImageCarouselWidget {
     pub fn new(widget: CommonWidgetProps, image_dir: &str, number_of_images: usize) -> Self {
         Self {
-            widget, // widget.textures(vec!["images/horizon-gauge-fg.png"]),
+            widget,
             props: Arc::new(RwLock::new(ImageCarousel {
                 image_dir: image_dir.to_owned(),
                 number_of_images,
@@ -708,6 +708,62 @@ impl ImageCarouselWidget {
     }
 
     pub fn on_window(self, window: &mut Window) -> Arc<RwLock<ImageCarousel>> {
+        let hz = self.props.clone();
+        window.widgets.push(Box::new(self));
+        hz
+    }
+}
+
+pub struct DroneYawWidget {
+    widget: CommonWidgetProps,
+    props: Arc<RwLock<FloatGenericValue>>,
+    texcache: TextureCache,
+}
+
+impl Widget for DroneYawWidget {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+        let (x, y, w, h) = self.widget.compute_dim(canvas);
+        let p = self.props.read().unwrap();
+        let angle = p.value;
+        drop(p);
+
+        let bg = self
+            .texcache
+            .load_texture(
+                canvas,
+                "images/yaw-bg.png".to_owned(),
+                w as u32,
+                h as u32,
+                None,
+            )
+            .expect("can't load yaw bg texture");
+
+        let fg = self
+            .texcache
+            .load_texture(
+                canvas,
+                "images/yaw-fg.png".to_owned(),
+                w as u32 * 4 / 5, // somewhat smaller than the background
+                h as u32 * 4 / 5,
+                None,
+            )
+            .expect("can't load yaw bg texture");
+
+        bg.render(canvas, x, y);
+        fg.render_rot(canvas, x, y, angle);
+    }
+}
+
+impl DroneYawWidget {
+    pub fn new(widget: CommonWidgetProps) -> Self {
+        Self {
+            widget,
+            props: Arc::new(RwLock::new(FloatGenericValue { value: 0.0 })),
+            texcache: TextureCache::new(),
+        }
+    }
+
+    pub fn on_window(self, window: &mut Window) -> Arc<RwLock<FloatGenericValue>> {
         let hz = self.props.clone();
         window.widgets.push(Box::new(self));
         hz
@@ -768,6 +824,20 @@ pub struct FloatClampedValue {
 impl FloatClampedValue {
     pub fn set(&mut self, value: f32) {
         self.value = utils::clamp(value);
+    }
+
+    pub fn get(&self) -> f32 {
+        self.value
+    }
+}
+
+pub struct FloatGenericValue {
+    value: f32,
+}
+
+impl FloatGenericValue {
+    pub fn set(&mut self, value: f32) {
+        self.value = value;
     }
 
     pub fn get(&self) -> f32 {
