@@ -22,8 +22,8 @@ fn main() {
 
     let sensitivity = desktop::HorizSliderWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
-            .place(0.8, 0.1)
-            .size(0.2, 0.003),
+            .place(0.2, 0.5)
+            .size(0.15, 0.003),
         0.0,
         1.0,
         5.0,
@@ -32,14 +32,14 @@ fn main() {
 
     let left_stick = desktop::GamepadStickWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
-            .place(0.2, 0.8)
+            .place(0.2, 0.7)
             .rect(0.1),
     )
     .on_window(&mut win);
 
     let right_stick = desktop::GamepadStickWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
-            .place(0.8, 0.8)
+            .place(0.8, 0.7)
             .rect(0.1),
     )
     .on_window(&mut win);
@@ -50,28 +50,28 @@ fn main() {
 
     let battery = desktop::BatteryStatusWidget::new(
         CommonWidgetProps::new(&canvas)
-            .place(0.1, 0.3)
+            .place(0.1, 0.1)
             .size(0.01, 0.06),
     )
     .on_window(&mut win);
 
     let wifi_strength =
-        desktop::WifiStrengthWidget::new(CommonWidgetProps::new(&canvas).place(0.1, 0.6).rect(0.1))
+        desktop::WifiStrengthWidget::new(CommonWidgetProps::new(&canvas).place(0.8, 0.2).rect(0.1))
             .on_window(&mut win);
 
     let light_signal =
-        desktop::LightSignalWidget::new(CommonWidgetProps::new(&canvas).place(0.2, 0.6).rect(0.1))
+        desktop::LightSignalWidget::new(CommonWidgetProps::new(&canvas).place(0.8, 0.45).rect(0.1))
             .on_window(&mut win);
 
     let horizon = desktop::HorizonWidget::new(
-        CommonWidgetProps::new(&canvas).place(0.5, 0.8).rect(0.12),
+        CommonWidgetProps::new(&canvas).place(0.5, 0.7).rect(0.12),
         40.0,
     )
     .on_window(&mut win);
 
     let image_carousel = desktop::ImageCarouselWidget::new(
         CommonWidgetProps::new(&canvas)
-            .place(0.5, 0.1)
+            .place(0.5, 0.9)
             .size(0.8, 0.1),
         "examples/widget-demo/images",
         10,
