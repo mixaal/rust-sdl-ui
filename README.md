@@ -1,4 +1,7 @@
 # rust-sdl-ui
+
+![build status](https://github.com/mixaal/rust-sdl-ui/actions/workflows/rust.yml/badge.svg)
+
 UI widgets written for SDL. Mainly for drone remote control.
 
 ## Quick Start
