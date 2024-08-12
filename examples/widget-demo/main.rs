@@ -1,8 +1,9 @@
 use std::time::Instant;
 
+use rust_gamepad::gamepad::{self, Gamepad};
 use rust_sdl_ui::{
     desktop::{self, CommonWidgetProps},
-    gamepad, sdl,
+    sdl,
 };
 use sdl2::{event::Event, keyboard::Keycode};
 
@@ -17,7 +18,7 @@ fn main() {
     let (mut win, mut event_pump, mut canvas) = desktop::Window::new(3440, 1440, 60);
 
     // create gamepad handler
-    let js = gamepad::Gamepad::new("/dev/input/js0", gamepad::XBOX_MAPPING.clone());
+    let js = Gamepad::new("/dev/input/js0", gamepad::XBOX_MAPPING.clone());
     js.background_handler();
 
     let sensitivity = desktop::HorizSliderWidget::new(

@@ -15,3 +15,6 @@ tracing-subscriber = "0.3.18"
 [[example]]
 name = "widget-demo"
 path = "examples/widget-demo/main.rs"
+
+[dev-dependencies]
+rust-gamepad = { git = "https://github.com/mixaal/rust-gamepad/" }
