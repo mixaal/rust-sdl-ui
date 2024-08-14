@@ -28,14 +28,11 @@ pub struct Window {
     pub fps: u32,
     pub width: u32,
     pub height: u32,
+    pub event_pump: sdl2::EventPump,
 }
 
 impl Window {
-    pub fn new(
-        width: u32,
-        height: u32,
-        fps: u32,
-    ) -> (Self, sdl2::EventPump, Canvas<sdl2::video::Window>) {
+    pub fn new(width: u32, height: u32, fps: u32) -> (Self, Canvas<sdl2::video::Window>) {
         let (event_pump, canvas) = sdl::sdl_init(width, height);
         (
             Self {
@@ -43,8 +40,8 @@ impl Window {
                 width,
                 height,
                 fps,
+                event_pump,
             },
-            event_pump,
             canvas,
         )
     }
@@ -53,6 +50,26 @@ impl Window {
         for widget in self.widgets.iter_mut() {
             widget.draw(canvas);
         }
+    }
+
+    // installs default Esc+Quit handling event
+    pub fn default_keyhandler(&mut self) -> bool {
+        for event in self.event_pump.poll_iter() {
+            match event {
+                sdl2::event::Event::Quit { .. } => {
+                    return true;
+                }
+                sdl2::event::Event::KeyDown {
+                    keycode: Some(sdl2::keyboard::Keycode::Escape),
+                    ..
+                } => {
+                    return true;
+                }
+
+                _ => {}
+            }
+        }
+        false
     }
 }
 

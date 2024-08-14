@@ -15,7 +15,7 @@ fn main() {
     let mut playing = true;
 
     // initialize window
-    let (mut win, mut event_pump, mut canvas) = desktop::Window::new(3440, 1440, 60);
+    let (mut win, mut canvas) = desktop::Window::new(3440, 1440, 60);
 
     // create gamepad handler
     let js = Gamepad::new("/dev/input/js0", gamepad::XBOX_MAPPING.clone());
@@ -102,7 +102,7 @@ fn main() {
         'running: loop {
             let start = Instant::now();
             // handle keyboard events
-            if keyhandler(&mut event_pump) {
+            if win.default_keyhandler() {
                 playing = false;
                 break 'running;
             }
@@ -161,23 +161,4 @@ fn main() {
             last_state = st;
         }
     }
-}
-
-fn keyhandler(event_pump: &mut sdl2::EventPump) -> bool {
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::Quit { .. } => {
-                return true;
-            }
-            Event::KeyDown {
-                keycode: Some(Keycode::Escape),
-                ..
-            } => {
-                return true;
-            }
-
-            _ => {}
-        }
-    }
-    false
 }
