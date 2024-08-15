@@ -7,7 +7,7 @@ UI widgets written for SDL. Mainly for drone remote control.
 ## Quick Start
 
 ```bash
-sudo apt install  libsdl2-gfx-dev libsdl2-image-dev libsdl2-dev
+sudo apt install  libsdl2-gfx-dev libsdl2-image-dev libsdl2-dev libsdl2-ttf-dev
 cargo build --examples
 target/debug/examples/widget-demo
 ```

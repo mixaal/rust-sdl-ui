@@ -6,7 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sdl2 = { version = "0.37.0", features = ["image", "unsafe_textures", "gfx"] }
+sdl2 = { version = "0.37.0", features = [
+    "image",
+    "unsafe_textures",
+    "gfx",
+    "ttf",
+] }
 openh264 = "0.6.2"
 lazy_static = "1.5.0"
 tracing = "0.1.40"

@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install SDL2
-      run: sudo apt install -y libsdl2-gfx-dev libsdl2-image-dev libsdl2-dev
+      run: sudo apt install -y libsdl2-gfx-dev libsdl2-image-dev libsdl2-dev libsdl2-ttf-dev
     - name: Build
       run: cargo build --examples --verbose
     - name: Run tests

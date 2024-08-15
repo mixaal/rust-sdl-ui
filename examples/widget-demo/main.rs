@@ -99,7 +99,9 @@ fn main() {
     let mut t = temperature.write().unwrap();
     t.set_color1(RgbColor::new(0.0, 0.3, 1.0, 1.0));
     t.set_color2(RgbColor::new(1.0, 0.0, 0.0, 1.0));
-    t.set(-0.6);
+    t.set_color_scale_factor(0.65);
+    t.set(-65.0);
+    t.set_scale(0.01);
     drop(t);
 
     let battery = desktop::BatteryStatusWidget::new(

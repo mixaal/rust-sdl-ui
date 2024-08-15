@@ -17,25 +17,33 @@ use sdl2::{
     pixels::Color,
     rect::Rect,
     render::{Canvas, Texture, TextureCreator},
+    ttf::Sdl2TtfContext,
     video::WindowContext,
 };
 
 type SdlWin = sdl2::video::Window;
 
 pub trait Widget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>);
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext);
 }
+
+pub struct TextRender {
+    message: String,
+}
+
 pub struct Window {
     widgets: Vec<Box<dyn Widget>>,
     pub fps: u32,
     pub width: u32,
     pub height: u32,
     pub event_pump: sdl2::EventPump,
+    pub ttf: sdl2::ttf::Sdl2TtfContext,
 }
 
 impl Window {
     pub fn new(width: u32, height: u32, fps: u32) -> (Self, Canvas<sdl2::video::Window>) {
         let (event_pump, canvas) = sdl::sdl_init(width, height);
+        let ttf = sdl2::ttf::init().expect("can't setup ttf context");
         (
             Self {
                 widgets: Vec::new(),
@@ -43,6 +51,7 @@ impl Window {
                 height,
                 fps,
                 event_pump,
+                ttf,
             },
             canvas,
         )
@@ -50,7 +59,7 @@ impl Window {
 
     pub fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
         for widget in self.widgets.iter_mut() {
-            widget.draw(canvas);
+            widget.draw(canvas, &mut self.ttf);
         }
     }
 
@@ -209,7 +218,7 @@ impl GamepadStickWidget {
 }
 
 impl Widget for GamepadStickWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
 
         self.widget.load_textures(canvas);
@@ -232,7 +241,7 @@ pub struct HorizSliderWidget {
 }
 
 impl Widget for HorizSliderWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
 
         self.widget.load_textures(canvas);
@@ -272,31 +281,55 @@ pub struct VertThrustWidget {
 }
 
 impl Widget for VertThrustWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
+        let tc = canvas.texture_creator();
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let vert_speed = p.vert_value;
         let c1 = p.color1.clone();
         let c2 = p.color2.clone();
+        let factor = p.color_scale_factor;
+        let scale = p.scale;
         drop(p);
 
         self.widget.load_textures(canvas);
 
-        sdl::sdl_render_tex(canvas, &self.widget.textures[0], x, y);
+        sdl::sdl_scale_tex(canvas, &self.widget.textures[0], x, y, w, h);
         let d_color = c2.clone() - c1.clone();
-        let dst_color = c1.clone() + d_color.mul(vert_speed.abs());
+        let dst_color = c1.clone() + d_color.mul(factor * vert_speed.abs() * scale);
         let dw = (w as f32 * 0.12) as i32;
         sdl::draw_horizontal_gradient_box(
             canvas,
             x - dw / 2,
             y,
             dw,
-            (vert_speed * h as f32 / 2.0) as i32,
+            (vert_speed * scale * h as f32 / 2.0) as i32,
             128,
             c1,
             dst_color,
             true,
         );
+        let font = ttf.load_font("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", 24);
+        if font.is_err() {
+            return;
+        }
+
+        // let val = vert_speed as i32;
+        let mut font = font.unwrap();
+        //font.set_style(sdl2::ttf::FontStyle::BOLD);
+        let surface = font
+            .render(&vert_speed.to_string())
+            .blended(color::WHITE.to_sdl_rgba());
+        if surface.is_err() {
+            return;
+        }
+        let surface = surface.unwrap();
+        let texture = tc.create_texture_from_surface(&surface);
+        if texture.is_err() {
+            return;
+        }
+        let texture = texture.unwrap();
+        sdl::sdl_render_tex(canvas, &texture, x, y);
     }
 }
 
@@ -308,6 +341,8 @@ impl VertThrustWidget {
                 vert_value: 0.0,
                 color1: color::YELLOW.clone(),
                 color2: color::BLUE.clone(),
+                color_scale_factor: 1.0,
+                scale: 1.0,
             })),
         }
     }
@@ -326,7 +361,7 @@ pub struct RawImageWidget {
 }
 
 impl Widget for RawImageWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let img_width = p.width;
@@ -402,7 +437,7 @@ pub struct VideoWidget {
 }
 
 impl Widget for VideoWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let img_width = p.width;
@@ -479,7 +514,7 @@ pub struct BatteryStatusWidget {
 }
 
 impl Widget for BatteryStatusWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let percentage = p.value;
@@ -535,7 +570,7 @@ pub struct WifiStrengthWidget {
 }
 
 impl Widget for WifiStrengthWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         self.widget.load_textures(canvas);
 
@@ -594,7 +629,7 @@ pub struct LightSignalWidget {
 }
 
 impl Widget for LightSignalWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         self.widget.load_textures(canvas);
 
@@ -654,7 +689,7 @@ pub struct HorizonWidget {
 }
 
 impl Widget for HorizonWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         self.widget.load_textures(canvas);
 
@@ -715,7 +750,7 @@ pub struct ImageCarouselWidget {
 }
 
 impl Widget for ImageCarouselWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let zw = self.widget.canvas_width as f32 * 0.3;
 
@@ -821,7 +856,7 @@ pub struct DroneYawWidget {
 }
 
 impl Widget for DroneYawWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let angle = p.value;
@@ -877,7 +912,7 @@ pub struct FlightLogWidget {
 }
 
 impl Widget for FlightLogWidget {
-    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
 
         let bg = self
@@ -1157,11 +1192,21 @@ pub struct VertThrust {
     vert_value: f32,
     color1: RgbColor,
     color2: RgbColor,
+    color_scale_factor: f32,
+    scale: f32,
 }
 
 impl VertThrust {
     pub fn set(&mut self, v: f32) {
         self.vert_value = v;
+    }
+
+    pub fn set_color_scale_factor(&mut self, v: f32) {
+        self.color_scale_factor = utils::clamp(v);
+    }
+
+    pub fn set_scale(&mut self, v: f32) {
+        self.scale = v;
     }
 
     pub fn get(&self) -> f32 {
