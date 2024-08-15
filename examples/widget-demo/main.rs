@@ -9,7 +9,7 @@ use std::{
 
 use rust_gamepad::gamepad::{self, Gamepad};
 use rust_sdl_ui::{
-    color::RgbColor,
+    color::{self, RgbColor},
     desktop::{self, CommonWidgetProps},
     sdl,
 };
@@ -122,6 +122,7 @@ fn main() {
     let horizon = desktop::HorizonWidget::new(
         CommonWidgetProps::new(&canvas).place(0.5, 0.7).rect(0.12),
         40.0,
+        color::YELLOW.clone(),
     )
     .on_window(&mut win);
 

@@ -686,6 +686,7 @@ pub struct HorizonWidget {
     widget: CommonWidgetProps,
     props: Arc<RwLock<DroneOrientation>>,
     max_pitch: f32,
+    horizon_color: RgbColor,
 }
 
 impl Widget for HorizonWidget {
@@ -715,7 +716,7 @@ impl Widget for HorizonWidget {
             let x2 = (circle_radius * right_angle.sin()) as i32;
             let y2 = (circle_radius * right_angle.cos()) as i32;
 
-            canvas.set_draw_color(color::CYBER_COOL_BLUE.to_sdl_rgba());
+            canvas.set_draw_color(self.horizon_color.to_sdl_rgba());
             let _ = canvas.draw_line((x + x1 + dx, y - y1 - dy), (x + x2 + dx, y - y2 - dy));
         }
 
@@ -724,9 +725,10 @@ impl Widget for HorizonWidget {
 }
 
 impl HorizonWidget {
-    pub fn new(widget: CommonWidgetProps, max_pitch: f32) -> Self {
+    pub fn new(widget: CommonWidgetProps, max_pitch: f32, horizon_color: RgbColor) -> Self {
         Self {
             max_pitch,
+            horizon_color,
             widget: widget.textures(vec!["images/horizon-gauge-fg.png"]),
             props: Arc::new(RwLock::new(DroneOrientation {
                 pitch: 0.0,
