@@ -273,7 +273,7 @@ pub struct VertThrustWidget {
 
 impl Widget for VertThrustWidget {
     fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
-        let (x, y, _w, h) = self.widget.compute_dim(canvas);
+        let (x, y, w, h) = self.widget.compute_dim(canvas);
         let p = self.props.read().unwrap();
         let vert_speed = p.vert_value;
         let c1 = p.color1.clone();
@@ -283,15 +283,18 @@ impl Widget for VertThrustWidget {
         self.widget.load_textures(canvas);
 
         sdl::sdl_render_tex(canvas, &self.widget.textures[0], x, y);
+        let d_color = c2.clone() - c1.clone();
+        let dst_color = c1.clone() + d_color.mul(vert_speed.abs());
+        let dw = (w as f32 * 0.12) as i32;
         sdl::draw_horizontal_gradient_box(
             canvas,
-            x,
+            x - dw / 2,
             y,
-            50,
+            dw,
             (vert_speed * h as f32 / 2.0) as i32,
             128,
             c1,
-            c2,
+            dst_color,
             true,
         );
     }
@@ -1163,5 +1166,13 @@ impl VertThrust {
 
     pub fn get(&self) -> f32 {
         self.vert_value
+    }
+
+    pub fn set_color1(&mut self, color1: RgbColor) {
+        self.color1 = color1;
+    }
+
+    pub fn set_color2(&mut self, color2: RgbColor) {
+        self.color2 = color2;
     }
 }

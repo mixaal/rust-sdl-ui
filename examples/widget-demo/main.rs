@@ -9,6 +9,7 @@ use std::{
 
 use rust_gamepad::gamepad::{self, Gamepad};
 use rust_sdl_ui::{
+    color::RgbColor,
     desktop::{self, CommonWidgetProps},
     sdl,
 };
@@ -90,6 +91,16 @@ fn main() {
     let vert_thrust =
         desktop::VertThrustWidget::new(CommonWidgetProps::new(&canvas).place(0.2, 0.2).rect(0.1))
             .on_window(&mut win);
+
+    let temperature =
+        desktop::VertThrustWidget::new(CommonWidgetProps::new(&canvas).place(0.3, 0.2).rect(0.1))
+            .on_window(&mut win);
+
+    let mut t = temperature.write().unwrap();
+    t.set_color1(RgbColor::new(0.0, 0.3, 1.0, 1.0));
+    t.set_color2(RgbColor::new(1.0, 0.0, 0.0, 1.0));
+    t.set(-0.6);
+    drop(t);
 
     let battery = desktop::BatteryStatusWidget::new(
         CommonWidgetProps::new(&canvas)
