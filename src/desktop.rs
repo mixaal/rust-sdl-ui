@@ -1,6 +1,7 @@
 use std::{
     f32::consts::PI,
-    sync::{Arc, RwLock},
+    sync::{mpsc::Receiver, Arc, RwLock},
+    thread,
     time::{Duration, Instant},
 };
 
@@ -10,6 +11,7 @@ use crate::{
     texcache::TextureCache,
     utils,
 };
+use openh264::{decoder::Decoder, nal_units};
 use sdl2::{
     gfx::primitives::DrawRenderer,
     pixels::Color,
@@ -385,6 +387,84 @@ impl RawImageWidget {
     pub fn on_window(self, window: &mut Window) -> Arc<RwLock<RawImage>> {
         let hz = self.props.clone();
         window.widgets.push(Box::new(self));
+        hz
+    }
+}
+
+pub struct VideoWidget {
+    widget: CommonWidgetProps,
+    props: Arc<RwLock<Video>>,
+    image_texture: Texture,
+    inner_decoder: Arc<VideoDecoder>,
+}
+
+impl Widget for VideoWidget {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>) {
+        let (x, y, w, h) = self.widget.compute_dim(canvas);
+        let p = self.props.read().unwrap();
+        let img_width = p.width;
+        let img_height = p.height;
+        drop(p);
+
+        let rgb = self.inner_decoder.rgb.read().unwrap();
+        self.image_texture
+            .with_lock(None, |buffer: &mut [u8], pitch: usize| {
+                for y in 0..img_height {
+                    for x in 0..img_width {
+                        let offset = y as usize * pitch + x as usize * 4;
+                        let source_offset = ((y * img_width + x) * 3) as usize;
+                        buffer[offset] = rgb[source_offset];
+                        buffer[offset + 1] = rgb[source_offset + 1];
+                        buffer[offset + 2] = rgb[source_offset + 2];
+                        buffer[offset + 3] = 255;
+                    }
+                }
+            })
+            .unwrap();
+        drop(rgb);
+        canvas
+            .copy(
+                &self.image_texture,
+                None,
+                Some(sdl2::rect::Rect::new(
+                    x - w / 2,
+                    y - h / 2,
+                    w as u32,
+                    h as u32,
+                )),
+            )
+            .unwrap();
+    }
+}
+
+impl VideoWidget {
+    pub fn new(
+        widget: CommonWidgetProps,
+        canvas: &mut Canvas<SdlWin>,
+        width: u32,
+        height: u32,
+        fps: u64,
+    ) -> Self {
+        let texture_creator = canvas.texture_creator();
+        let image_texture = texture_creator
+            .create_texture_streaming(sdl2::pixels::PixelFormatEnum::RGBA32, width, height)
+            .expect("can't create texture renderer");
+        // let rx = Arc::new(RwLock::new(video_stream));
+        // thread::spawn(move || Self::decode_video(video_stream, width, height));
+        Self {
+            image_texture,
+            widget,
+            props: Arc::new(RwLock::new(Video::new(width, height))),
+            inner_decoder: Arc::new(VideoDecoder::new(width, height, fps)),
+        }
+    }
+
+    pub fn on_window(self, window: &mut Window, rx: Receiver<Vec<u8>>) -> Arc<RwLock<Video>> {
+        let hz = self.props.clone();
+        let inner = self.inner_decoder.clone();
+        thread::spawn(move || inner.decode_video(rx));
+        window.widgets.push(Box::new(self));
+
         hz
     }
 }
@@ -825,6 +905,111 @@ impl FlightLogWidget {
         let hz = self.props.clone();
         window.widgets.push(Box::new(self));
         hz
+    }
+}
+
+struct VideoDecoder {
+    rgb: Arc<RwLock<Vec<u8>>>,
+    sleep_fps: Duration,
+}
+
+pub struct Video {
+    width: u32,
+    height: u32,
+}
+
+impl Video {
+    fn new(width: u32, height: u32) -> Self {
+        Self { width, height }
+    }
+}
+
+impl VideoDecoder {
+    fn new(width: u32, height: u32, fps: u64) -> Self {
+        Self {
+            rgb: Arc::new(RwLock::new(utils::alloc_vec((width * height * 3) as usize))),
+            sleep_fps: Duration::from_millis(1000 / fps),
+        }
+    }
+
+    fn decode_video(&self, rx: Receiver<Vec<u8>>) {
+        let mut decoder = Decoder::new().expect("decoder");
+        loop {
+            // let mut stream = Vec::new();
+            // loop {
+            //     let partial = rx.recv();
+            //     if partial.is_err() {
+            //         tracing::error!("error decoding stream: {}", partial.err().unwrap());
+            //         thread::sleep(Duration::from_millis(50));
+            //         continue;
+            //     }
+
+            //     let mut partial = partial.unwrap();
+            //     let l = partial.len();
+            //     stream.append(&mut partial);
+            //     // tracing::info!("partial.len={}", l);
+            //     if l != 1460 || stream.len() > 1048576 {
+            //         break;
+            //     }
+            // }
+            let stream = rx.recv();
+            if stream.is_err() {
+                tracing::error!("error decoding stream: {}", stream.err().unwrap());
+                thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+            let stream = stream.unwrap();
+            tracing::info!("stream.len={}", stream.len());
+
+            // Split H.264 into NAL units and decode each.
+            let mut packet_no = 0;
+            let units = nal_units(&stream);
+            for packet in units {
+                let ps = packet.len();
+                tracing::info!("ps={}", ps);
+                packet_no += 1;
+                // On the first few frames this may fail, so you should check the result
+                // a few packets before giving up.
+                let maybe_some_yuv = decoder.decode(packet);
+                if maybe_some_yuv.is_err() {
+                    println!("{packet_no} is error: {}", maybe_some_yuv.err().unwrap());
+                } else {
+                    let yuv = maybe_some_yuv.unwrap();
+                    if yuv.is_none() {
+                        println!("{packet_no} is none");
+                    } else {
+                        let yuv = yuv.unwrap();
+                        let mut rgb = self.rgb.write().unwrap();
+                        yuv.write_rgb8(&mut rgb);
+                        tracing::info!("{packet_no} written as rgb");
+                        drop(rgb);
+                        // self.image_texture
+                        //     .with_lock(None, |buffer: &mut [u8], pitch: usize| {
+                        //         for y in 0..img_height {
+                        //             for x in 0..img_width {
+                        //                 let offset = y as usize * pitch + x as usize * 4;
+                        //                 let source_offset = ((y * img_width + x) * 3) as usize;
+                        //                 buffer[offset] = self.rgb[source_offset];
+                        //                 buffer[offset + 1] = self.rgb[source_offset + 1];
+                        //                 buffer[offset + 2] = self.rgb[source_offset + 2];
+                        //                 buffer[offset + 3] = 255;
+                        //             }
+                        //         }
+                        //     })
+                        //     .unwrap();
+                        // println!(
+                        //     "{packet_no}: dim={:?} alloc_rgb={} {}x{}x{}",
+                        //     yuv.dimensions_i32(),
+                        //     yuv.estimate_rgb_u8_size(),
+                        //     yuv.y().len(),
+                        //     yuv.u().len(),
+                        //     yuv.v().len(),
+                        // );
+                    }
+                }
+            }
+            thread::sleep(self.sleep_fps);
+        }
     }
 }
 

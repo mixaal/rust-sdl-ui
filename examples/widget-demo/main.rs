@@ -1,11 +1,18 @@
-use std::time::Instant;
+use std::{
+    env,
+    fs::File,
+    io::{self, Read},
+    sync::mpsc,
+    thread,
+    time::Instant,
+};
 
 use rust_gamepad::gamepad::{self, Gamepad};
 use rust_sdl_ui::{
     desktop::{self, CommonWidgetProps},
     sdl,
 };
-use sdl2::{event::Event, keyboard::Keycode};
+use sdl2::video;
 
 fn main() {
     tracing_subscriber::fmt()
@@ -20,6 +27,41 @@ fn main() {
     // create gamepad handler
     let js = Gamepad::new("/dev/input/js0", gamepad::XBOX_MAPPING.clone());
     js.background_handler();
+
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let video_file = env::var("TEST_VIDEO");
+        if video_file.is_err() {
+            return;
+        }
+        let video_file = video_file.unwrap();
+        let file = File::open(video_file);
+        if file.is_err() {
+            return;
+        }
+        let file = file.unwrap();
+        let mut reader = io::BufReader::new(file);
+        let mut buf: [u8; 1048576] = [0; 1048576];
+        loop {
+            let nread = reader.read(&mut buf);
+            if nread.is_err() {
+                break;
+            }
+            let _ = tx.send(buf.to_vec());
+        }
+    });
+
+    let video = desktop::VideoWidget::new(
+        desktop::CommonWidgetProps::new(&canvas)
+            .place(0.5, 0.3)
+            .size(0.5, 0.25),
+        &mut canvas,
+        960,
+        720,
+        60,
+    )
+    .on_window(&mut win, rx);
 
     let sensitivity = desktop::HorizSliderWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
