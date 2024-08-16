@@ -13,7 +13,6 @@ use rust_sdl_ui::{
     desktop::{self, CommonWidgetProps},
     sdl,
 };
-use sdl2::video;
 
 fn main() {
     tracing_subscriber::fmt()
@@ -53,14 +52,13 @@ fn main() {
         }
     });
 
-    let video = desktop::VideoWidget::new(
+    let _video = desktop::VideoWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
             .place(0.5, 0.3)
             .size(0.5, 0.25),
         &mut canvas,
         960,
         720,
-        60,
     )
     .on_window(&mut win, rx);
 
@@ -106,8 +104,8 @@ fn main() {
 
     let battery = desktop::BatteryStatusWidget::new(
         CommonWidgetProps::new(&canvas)
-            .place(0.1, 0.1)
-            .size(0.01, 0.06),
+            .place(0.1, 0.5)
+            .size(0.02, 0.12),
     )
     .on_window(&mut win);
 
@@ -115,7 +113,7 @@ fn main() {
         desktop::WifiStrengthWidget::new(CommonWidgetProps::new(&canvas).place(0.8, 0.2).rect(0.1))
             .on_window(&mut win);
 
-    let light_signal =
+    let _light_signal =
         desktop::LightSignalWidget::new(CommonWidgetProps::new(&canvas).place(0.8, 0.45).rect(0.1))
             .on_window(&mut win);
 
@@ -139,7 +137,7 @@ fn main() {
         desktop::DroneYawWidget::new(CommonWidgetProps::new(&canvas).place(0.35, 0.7).rect(0.12))
             .on_window(&mut win);
 
-    let flight_log =
+    let _flight_log =
         desktop::FlightLogWidget::new(CommonWidgetProps::new(&canvas).place(0.65, 0.7).rect(0.12))
             .on_window(&mut win);
 

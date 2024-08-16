@@ -5,8 +5,7 @@ use std::{
 
 use sdl2::{
     image::LoadTexture,
-    pixels::{PixelFormat, PixelFormatEnum},
-    rect::{Point, Rect},
+    rect::Rect,
     render::{Canvas, Texture},
     video::Window,
 };

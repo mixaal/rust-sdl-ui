@@ -2,7 +2,7 @@ use std::{
     f32::consts::PI,
     sync::{mpsc::Receiver, Arc, RwLock},
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use crate::{
@@ -469,7 +469,6 @@ impl VideoWidget {
         canvas: &mut Canvas<SdlWin>,
         width: u32,
         height: u32,
-        fps: u64,
     ) -> Self {
         let texture_creator = canvas.texture_creator();
         let image_texture = texture_creator
@@ -481,7 +480,7 @@ impl VideoWidget {
             image_texture,
             widget,
             props: Arc::new(RwLock::new(Video::new(width, height))),
-            inner_decoder: Arc::new(VideoDecoder::new(width, height, fps)),
+            inner_decoder: Arc::new(VideoDecoder::new(width, height)),
         }
     }
 
@@ -966,7 +965,6 @@ impl FlightLogWidget {
 
 struct VideoDecoder {
     rgb: Arc<RwLock<Vec<u8>>>,
-    sleep_fps: Duration,
 }
 
 pub struct Video {
@@ -981,10 +979,9 @@ impl Video {
 }
 
 impl VideoDecoder {
-    fn new(width: u32, height: u32, fps: u64) -> Self {
+    fn new(width: u32, height: u32) -> Self {
         Self {
             rgb: Arc::new(RwLock::new(utils::alloc_vec((width * height * 3) as usize))),
-            sleep_fps: Duration::from_millis(1000 / fps),
         }
     }
 
@@ -1039,32 +1036,10 @@ impl VideoDecoder {
                         yuv.write_rgb8(&mut rgb);
                         tracing::info!("{packet_no} written as rgb");
                         drop(rgb);
-                        // self.image_texture
-                        //     .with_lock(None, |buffer: &mut [u8], pitch: usize| {
-                        //         for y in 0..img_height {
-                        //             for x in 0..img_width {
-                        //                 let offset = y as usize * pitch + x as usize * 4;
-                        //                 let source_offset = ((y * img_width + x) * 3) as usize;
-                        //                 buffer[offset] = self.rgb[source_offset];
-                        //                 buffer[offset + 1] = self.rgb[source_offset + 1];
-                        //                 buffer[offset + 2] = self.rgb[source_offset + 2];
-                        //                 buffer[offset + 3] = 255;
-                        //             }
-                        //         }
-                        //     })
-                        //     .unwrap();
-                        // println!(
-                        //     "{packet_no}: dim={:?} alloc_rgb={} {}x{}x{}",
-                        //     yuv.dimensions_i32(),
-                        //     yuv.estimate_rgb_u8_size(),
-                        //     yuv.y().len(),
-                        //     yuv.u().len(),
-                        //     yuv.v().len(),
-                        // );
                     }
                 }
             }
-            thread::sleep(self.sleep_fps);
+            // thread::sleep(self.sleep_fps);
         }
     }
 }
