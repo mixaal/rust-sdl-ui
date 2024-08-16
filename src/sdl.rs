@@ -78,6 +78,42 @@ pub fn sdl_clear(canvas: &mut Canvas<Window>, r: u8, g: u8, b: u8) {
     canvas.clear();
 }
 
+pub fn sdl_text(
+    ttf: &mut sdl2::ttf::Sdl2TtfContext,
+    canvas: &mut Canvas<Window>,
+    text: &str,
+    font_size: u16,
+    color: RgbColor,
+    x: i32,
+    y: i32,
+) {
+    let mut fsize = font_size;
+    if fsize == 0 {
+        fsize = 24;
+    }
+    let font = ttf.load_font("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", fsize);
+    if font.is_err() {
+        return;
+    }
+
+    let tc = canvas.texture_creator();
+
+    // let val = vert_speed as i32;
+    let font = font.unwrap();
+    //font.set_style(sdl2::ttf::FontStyle::BOLD);
+    let surface = font.render(text).blended(color.to_sdl_rgba());
+    if surface.is_err() {
+        return;
+    }
+    let surface = surface.unwrap();
+    let texture = tc.create_texture_from_surface(&surface);
+    if texture.is_err() {
+        return;
+    }
+    let texture = texture.unwrap();
+    sdl_render_tex(canvas, &texture, x, y);
+}
+
 pub fn sdl_maintain_fps(start: Instant, fps: u32) {
     let frame_duration = Duration::new(0, 1_000_000_000u32 / fps);
     let elapsed = start.elapsed();

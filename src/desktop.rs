@@ -309,27 +309,15 @@ impl Widget for VertThrustWidget {
             dst_color,
             true,
         );
-        let font = ttf.load_font("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", 24);
-        if font.is_err() {
-            return;
-        }
-
-        // let val = vert_speed as i32;
-        let mut font = font.unwrap();
-        //font.set_style(sdl2::ttf::FontStyle::BOLD);
-        let surface = font
-            .render(&vert_speed.to_string())
-            .blended(color::WHITE.to_sdl_rgba());
-        if surface.is_err() {
-            return;
-        }
-        let surface = surface.unwrap();
-        let texture = tc.create_texture_from_surface(&surface);
-        if texture.is_err() {
-            return;
-        }
-        let texture = texture.unwrap();
-        sdl::sdl_render_tex(canvas, &texture, x, y);
+        sdl::sdl_text(
+            ttf,
+            canvas,
+            &vert_speed.to_string(),
+            24,
+            color::WHITE.clone(),
+            x,
+            y,
+        );
     }
 }
 
@@ -544,6 +532,9 @@ impl Widget for BatteryStatusWidget {
             w as u32 - 6,
             (bottom_y - top_y) as u32,
         ));
+        let val = (percentage * 100.0) as i32;
+        let text = format!("{val}%");
+        sdl::sdl_text(ttf, canvas, &text, 24, color::WHITE.clone(), x, y);
     }
 }
 
@@ -603,6 +594,16 @@ impl Widget for WifiStrengthWidget {
                 alpha = 0.4;
             }
         }
+        let strength = (value * 100.0) as i32;
+        sdl::sdl_text(
+            ttf,
+            canvas,
+            &strength.to_string(),
+            48,
+            color::WHITE.clone(),
+            x,
+            y - 2 * h / 5,
+        );
     }
 }
 
@@ -646,7 +647,8 @@ impl Widget for LightSignalWidget {
         let mut green = 255;
 
         let radius = w as f32 * 0.2 * self.timer.range();
-        if elapsed.as_secs() > 10 {
+        let secs_elapsed = elapsed.as_secs();
+        if secs_elapsed > 10 {
             green = 0;
             if self.timer.blink() {
                 return;
@@ -662,6 +664,15 @@ impl Widget for LightSignalWidget {
             dy as i16,
             radius as i16,
             Color::RGBA(red, green, 0, alpha as u8),
+        );
+        sdl::sdl_text(
+            ttf,
+            canvas,
+            &secs_elapsed.to_string(),
+            48,
+            color::RED.clone(),
+            x,
+            y,
         );
     }
 }
@@ -888,6 +899,9 @@ impl Widget for DroneYawWidget {
 
         bg.render(canvas, x, y);
         fg.render_rot(canvas, x, y, angle);
+
+        let text = format!("{:.1}{}", angle, 176 as char);
+        sdl::sdl_text(ttf, canvas, &text, 24, color::BLACK.clone(), x, y);
     }
 }
 
