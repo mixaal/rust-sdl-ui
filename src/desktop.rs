@@ -637,8 +637,8 @@ impl Widget for LightSignalWidget {
         let p = self.props.read().unwrap();
         let last_signal = p.tm;
         drop(p);
-        let elapsed = Instant::now() - last_signal;
-        let mut alpha = 255 as i64 - 10 * elapsed.as_secs() as i64;
+        let elapsed = (utils::now_msecs() - last_signal) / 1000;
+        let mut alpha = 255 as i64 - 10 * elapsed as i64;
         if alpha < 0 {
             alpha = 0;
         }
@@ -647,7 +647,7 @@ impl Widget for LightSignalWidget {
         let mut green = 255;
 
         let radius = w as f32 * 0.2 * self.timer.range();
-        let secs_elapsed = elapsed.as_secs();
+        let secs_elapsed = elapsed;
         if secs_elapsed > 10 {
             green = 0;
             if self.timer.blink() {
@@ -681,7 +681,9 @@ impl LightSignalWidget {
     pub fn new(widget: CommonWidgetProps) -> Self {
         Self {
             widget: widget.textures(vec!["images/light-bg.png"]),
-            props: Arc::new(RwLock::new(LightSignal { tm: Instant::now() })),
+            props: Arc::new(RwLock::new(LightSignal {
+                tm: utils::now_msecs(),
+            })),
             timer: utils::GameTimer::new(Duration::from_millis(800)),
         }
     }
@@ -1107,12 +1109,12 @@ impl DroneOrientation {
 }
 
 pub struct LightSignal {
-    tm: Instant,
+    tm: u128,
 }
 
 impl LightSignal {
-    pub fn now(&mut self) {
-        self.tm = Instant::now();
+    pub fn timestamp(&mut self, tm: u128) {
+        self.tm = tm;
     }
 }
 

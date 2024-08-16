@@ -1,6 +1,6 @@
 // use crate::gfx::color::RgbColor;
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub(crate) fn clamp(x: f32) -> f32 {
     if x < 0.0 {
@@ -10,6 +10,14 @@ pub(crate) fn clamp(x: f32) -> f32 {
         return 1.0;
     }
     x
+}
+
+pub fn now_msecs() -> u128 {
+    let tm = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("can't obtain time");
+
+    tm.as_millis()
 }
 
 pub fn alloc_vec(size: usize) -> Vec<u8> {

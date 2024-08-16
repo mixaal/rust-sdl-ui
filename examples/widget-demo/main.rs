@@ -172,9 +172,9 @@ fn main() {
             drone_yaw.write().unwrap().set(angle);
             angle += 0.1;
 
-            if st.a() {
-                light_signal.write().unwrap().now();
-            }
+            // if st.a() {
+            //     light_signal.write().unwrap().timestamp(utils::now_msecs);
+            // }
 
             let rb = st.button_clicked(gamepad::Buttons::RB, &last_state);
             let lb = st.button_clicked(gamepad::Buttons::LB, &last_state);
