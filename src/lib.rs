@@ -7,3 +7,4 @@ pub mod sdl;
 pub(crate) mod texcache;
 pub(crate) mod utils;
 pub mod vec;
+pub(crate) mod video;

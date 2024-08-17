@@ -42,7 +42,7 @@ fn main() {
         }
         let file = file.unwrap();
         let mut reader = io::BufReader::new(file);
-        let mut buf: [u8; 1048576] = [0; 1048576];
+        let mut buf: [u8; 32768] = [0; 32768];
         loop {
             let nread = reader.read(&mut buf);
             if nread.is_err() {

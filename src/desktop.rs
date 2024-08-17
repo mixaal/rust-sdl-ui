@@ -988,23 +988,6 @@ impl VideoDecoder {
     fn decode_video(&self, rx: Receiver<Vec<u8>>) {
         let mut decoder = Decoder::new().expect("decoder");
         loop {
-            // let mut stream = Vec::new();
-            // loop {
-            //     let partial = rx.recv();
-            //     if partial.is_err() {
-            //         tracing::error!("error decoding stream: {}", partial.err().unwrap());
-            //         thread::sleep(Duration::from_millis(50));
-            //         continue;
-            //     }
-
-            //     let mut partial = partial.unwrap();
-            //     let l = partial.len();
-            //     stream.append(&mut partial);
-            //     // tracing::info!("partial.len={}", l);
-            //     if l != 1460 || stream.len() > 1048576 {
-            //         break;
-            //     }
-            // }
             let stream = rx.recv();
             if stream.is_err() {
                 tracing::error!("error decoding stream: {}", stream.err().unwrap());
