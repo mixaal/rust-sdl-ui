@@ -33,9 +33,11 @@ impl NalParser {
                 let copy_offset = last_offset;
                 self.last_nal = Some(idx);
                 self.curr_offset = idx + 2;
-                return StreamAction::ProcessPacket(
-                    self.leftover_buffer[copy_offset..idx].to_vec(),
-                );
+                let packet = self.leftover_buffer[copy_offset..idx].to_vec();
+                self.leftover_buffer = self.leftover_buffer[idx..].to_vec();
+                self.last_nal = Some(0);
+                self.curr_offset = 2;
+                return StreamAction::ProcessPacket(packet);
             } else {
                 // Try your luck searcing for 0, 0, 1
                 // In case there is no 0, 0, 1 in the next try, you get ReadMore
@@ -205,7 +207,7 @@ mod test {
             super::StreamAction::ProcessPacket(vec![0, 0, 1, 104, 238, 56, 128, 0]),
             np.get_packet()
         );
-        assert_eq!(Some(11), np.last_nal);
+        assert_eq!(Some(0), np.last_nal);
 
         // However no follow-up mark found till the end of current stream, hence, read more
         assert_eq!(super::StreamAction::ReadMore, np.get_packet());
@@ -264,18 +266,18 @@ mod test {
             np.get_packet()
         );
         assert_eq!(super::StreamAction::ReadMore, np.get_packet());
-        assert_eq!(Some(6), np.last_nal);
+        assert_eq!(Some(0), np.last_nal);
         np.read_stream(&mut vec![2, 2, 2]);
         assert_eq!(super::StreamAction::ReadMore, np.get_packet());
-        assert_eq!(Some(6), np.last_nal);
+        assert_eq!(Some(0), np.last_nal);
         np.read_stream(&mut vec![3, 3, 3, 0, 0, 1, 5, 6, 7]);
         assert_eq!(
             super::StreamAction::ProcessPacket(vec![0, 0, 1, 2, 2, 2, 3, 3, 3]),
             np.get_packet()
         );
-        assert_eq!(Some(15), np.last_nal);
+        assert_eq!(Some(0), np.last_nal);
         assert_eq!(super::StreamAction::ReadMore, np.get_packet());
-        assert_eq!(Some(15), np.last_nal);
+        assert_eq!(Some(0), np.last_nal);
     }
 
     #[test]
