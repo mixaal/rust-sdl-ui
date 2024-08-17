@@ -10,8 +10,8 @@ use crate::{
     sdl::{self},
     texcache::TextureCache,
     utils,
+    video::{StreamAction, VideoStreamDecoder},
 };
-use openh264::{decoder::Decoder, nal_units};
 use sdl2::{
     gfx::primitives::DrawRenderer,
     pixels::Color,
@@ -25,10 +25,6 @@ type SdlWin = sdl2::video::Window;
 
 pub trait Widget {
     fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext);
-}
-
-pub struct TextRender {
-    message: String,
 }
 
 pub struct Window {
@@ -469,6 +465,7 @@ impl VideoWidget {
         canvas: &mut Canvas<SdlWin>,
         width: u32,
         height: u32,
+        skip_frames: usize,
     ) -> Self {
         let texture_creator = canvas.texture_creator();
         let image_texture = texture_creator
@@ -480,7 +477,7 @@ impl VideoWidget {
             image_texture,
             widget,
             props: Arc::new(RwLock::new(Video::new(width, height))),
-            inner_decoder: Arc::new(VideoDecoder::new(width, height)),
+            inner_decoder: Arc::new(VideoDecoder::new(width, height, skip_frames)),
         }
     }
 
@@ -965,6 +962,7 @@ impl FlightLogWidget {
 
 struct VideoDecoder {
     rgb: Arc<RwLock<Vec<u8>>>,
+    skip_frames: usize,
 }
 
 pub struct Video {
@@ -979,14 +977,15 @@ impl Video {
 }
 
 impl VideoDecoder {
-    fn new(width: u32, height: u32) -> Self {
+    fn new(width: u32, height: u32, skip_frames: usize) -> Self {
         Self {
             rgb: Arc::new(RwLock::new(utils::alloc_vec((width * height * 3) as usize))),
+            skip_frames,
         }
     }
 
     fn decode_video(&self, rx: Receiver<Vec<u8>>) {
-        let mut decoder = Decoder::new().expect("decoder");
+        let mut vd = VideoStreamDecoder::new(self.skip_frames);
         loop {
             let stream = rx.recv();
             if stream.is_err() {
@@ -994,35 +993,15 @@ impl VideoDecoder {
                 thread::sleep(Duration::from_millis(500));
                 continue;
             }
-            let stream = stream.unwrap();
-            tracing::info!("stream.len={}", stream.len());
-
-            // Split H.264 into NAL units and decode each.
-            let mut packet_no = 0;
-            let units = nal_units(&stream);
-            for packet in units {
-                let ps = packet.len();
-                tracing::info!("ps={}", ps);
-                packet_no += 1;
-                // On the first few frames this may fail, so you should check the result
-                // a few packets before giving up.
-                let maybe_some_yuv = decoder.decode(packet);
-                if maybe_some_yuv.is_err() {
-                    println!("{packet_no} is error: {}", maybe_some_yuv.err().unwrap());
-                } else {
-                    let yuv = maybe_some_yuv.unwrap();
-                    if yuv.is_none() {
-                        println!("{packet_no} is none");
-                    } else {
-                        let yuv = yuv.unwrap();
-                        let mut rgb = self.rgb.write().unwrap();
-                        yuv.write_rgb8(&mut rgb);
-                        tracing::info!("{packet_no} written as rgb");
-                        drop(rgb);
-                    }
+            let mut stream = stream.unwrap();
+            // tracing::info!("stream.len={}", stream.len());
+            vd.send_stream(&mut stream);
+            loop {
+                let r = vd.decode_images(&self.rgb);
+                if r != StreamAction::CallNext {
+                    break;
                 }
             }
-            // thread::sleep(self.sleep_fps);
         }
     }
 }

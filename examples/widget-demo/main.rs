@@ -42,13 +42,17 @@ fn main() {
         }
         let file = file.unwrap();
         let mut reader = io::BufReader::new(file);
-        let mut buf: [u8; 32768] = [0; 32768];
+        let mut buf: [u8; 1460] = [0; 1460];
         loop {
             let nread = reader.read(&mut buf);
             if nread.is_err() {
                 break;
             }
-            let _ = tx.send(buf.to_vec());
+            let nread = nread.unwrap();
+            if nread == 0 {
+                break;
+            }
+            let _ = tx.send(buf[0..nread].to_vec());
         }
     });
 
@@ -59,6 +63,7 @@ fn main() {
         &mut canvas,
         960,
         720,
+        5,
     )
     .on_window(&mut win, rx);
 

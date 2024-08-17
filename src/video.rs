@@ -93,6 +93,10 @@ impl VideoStreamDecoder {
         }
     }
 
+    pub fn send_stream(&mut self, buffer: &mut Vec<u8>) {
+        self.np.read_stream(buffer);
+    }
+
     pub fn decode_images(&mut self, target_image: &Arc<RwLock<Vec<u8>>>) -> StreamAction {
         let r = self.np.get_packet();
         match r {
