@@ -30,10 +30,7 @@ impl NalParser {
         if let Some(idx) = self.get_nal_mark() {
             if let Some(last_offset) = self.last_nal {
                 // Last mark and current mark found, process packet
-                let copy_offset = last_offset;
-                self.last_nal = Some(idx);
-                self.curr_offset = idx + 2;
-                let packet = self.leftover_buffer[copy_offset..idx].to_vec();
+                let packet = self.leftover_buffer[last_offset..idx].to_vec();
                 self.leftover_buffer = self.leftover_buffer[idx..].to_vec();
                 self.last_nal = Some(0);
                 self.curr_offset = 2;
@@ -103,8 +100,10 @@ impl VideoStreamDecoder {
                 self.props.packet_no += 1;
                 let skip_frame = self.props.skip_frames != 0
                     && self.props.frame_no % self.props.skip_frames != 0;
+
                 if let Ok(maybe_yuv) = self.decoder.decode(&img) {
                     self.props.packet_decode_ok += 1;
+
                     if let Some(yuv) = maybe_yuv {
                         if !skip_frame {
                             let mut g = target_image.write().unwrap();
