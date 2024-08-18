@@ -12,6 +12,16 @@ pub(crate) fn clamp(x: f32) -> f32 {
     x
 }
 
+pub(crate) fn clamp_range(x: f32, min_val: f32, max_val: f32) -> f32 {
+    if x < min_val {
+        return min_val;
+    }
+    if x > max_val {
+        return max_val;
+    }
+    x
+}
+
 pub fn now_msecs() -> u128 {
     let tm = SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -1138,6 +1138,10 @@ impl HorizSlider {
         }
     }
 
+    pub fn set(&mut self, v: f32) {
+        self.value = utils::clamp_range(v, self.min_value, self.max_value);
+    }
+
     pub fn get(&self) -> f32 {
         self.value
     }
