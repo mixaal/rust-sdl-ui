@@ -141,15 +141,7 @@ impl VideoStreamDecoder {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        env,
-        fs::File,
-        io::{self, Read},
-        sync::{Arc, RwLock},
-        time::Instant,
-    };
-
-    use openh264::nal_units;
+    use std::sync::{Arc, RwLock};
 
     use crate::{utils, video::VideoStreamDecoder};
 

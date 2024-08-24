@@ -1,18 +1,38 @@
 use std::time::{Duration, Instant};
 
 use sdl2::{
+    controller::GameController,
     image::LoadTexture,
     pixels::Color,
     rect::{Point, Rect},
     render::{Canvas, Texture},
     video::Window,
-    EventPump,
+    EventPump, Sdl,
 };
 
 use super::color::RgbColor;
 
-pub fn sdl_init(width: u32, height: u32) -> (EventPump, Canvas<Window>) {
+pub fn sdl_init(
+    width: u32,
+    height: u32,
+    gamepad: bool,
+) -> (EventPump, Canvas<Window>, Option<GameController>) {
     let sdl_context = sdl2::init().unwrap();
+
+    let mut controller = None;
+    if gamepad {
+        let r = sdl_joy_init(sdl_context.clone());
+        if r.is_err() {
+            tracing::error!("error initializing gamepad");
+        } else {
+            controller = Some(r.unwrap());
+        }
+    }
+    let mut event_pump = sdl_context.event_pump().unwrap();
+    // for event in event_pump.wait_iter() {
+    //     println!("evcen={:?}", event);
+    // }
+
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
@@ -27,8 +47,46 @@ pub fn sdl_init(width: u32, height: u32) -> (EventPump, Canvas<Window>) {
         .build()
         .expect("could not make a canvas");
 
-    let event_pump = sdl_context.event_pump().unwrap();
-    (event_pump, canvas)
+    (event_pump, canvas, controller)
+}
+
+pub fn sdl_joy_init(sdl_context: Sdl) -> Result<GameController, String> {
+    let game_controller_subsystem = sdl_context.game_controller()?;
+
+    let available = game_controller_subsystem
+        .num_joysticks()
+        .map_err(|e| format!("can't enumerate joysticks: {}", e))?;
+
+    tracing::info!("{} joysticks available", available);
+
+    // Iterate over all available joysticks and look for game controllers.
+    let controller = (0..available)
+        .find_map(|id| {
+            if !game_controller_subsystem.is_game_controller(id) {
+                tracing::warn!("{} is not a game controller", id);
+                return None;
+            }
+
+            tracing::info!("Attempting to open controller {}", id);
+
+            match game_controller_subsystem.open(id) {
+                Ok(c) => {
+                    // We managed to find and open a game controller,
+                    // exit the loop
+                    tracing::info!("Success: opened \"{}\"", c.name());
+                    Some(c)
+                }
+                Err(e) => {
+                    tracing::error!("failed: {:?}", e);
+                    None
+                }
+            }
+        })
+        .expect("Couldn't open any controller");
+
+    tracing::info!("Controller mapping: {}", controller.mapping());
+    tracing::info!("is attached: {}", controller.attached());
+    Ok(controller)
 }
 
 pub fn sdl_load_textures(canvas: &Canvas<Window>, images: Vec<String>) -> Vec<Texture> {

@@ -7,12 +7,12 @@ use std::{
     time::Instant,
 };
 
-use rust_gamepad::gamepad::{self, Gamepad};
 use rust_sdl_ui::{
     color::{self, RgbColor},
     desktop::{self, CommonWidgetProps},
     sdl,
 };
+use sdl2::{controller::Axis, event::Event, EventPump};
 
 fn main() {
     tracing_subscriber::fmt()
@@ -22,11 +22,7 @@ fn main() {
     let mut playing = true;
 
     // initialize window
-    let (mut win, mut canvas) = desktop::Window::new(3440, 1440, 60);
-
-    // create gamepad handler
-    let js = Gamepad::new("/dev/input/js0", gamepad::XBOX_MAPPING.clone());
-    js.background_handler();
+    let (mut win, mut canvas) = desktop::Window::new(3440, 1440, 60, true);
 
     let (tx, rx) = mpsc::channel();
 
@@ -150,10 +146,11 @@ fn main() {
     wifi_strength.write().unwrap().set(0.4);
 
     sensitivity.write().unwrap().inc();
-    let mut last_state = js.state();
+
     let mut pitch = 0.0;
     let mut roll = 0.0;
     let mut angle = 0.0;
+    let mut drone = DroneHandling::default();
     while playing {
         // reset game state
 
@@ -161,63 +158,163 @@ fn main() {
         'running: loop {
             let start = Instant::now();
             // handle keyboard events
-            if win.default_keyhandler() {
+            if drone.drone_handler(&mut win.event_pump) {
                 playing = false;
                 break 'running;
             }
+
+            tracing::info!("drone={:?}", drone);
             // clear before drawing
             sdl::sdl_clear(&mut canvas, 10, 20, 30);
 
             // finally draw the game and maintain fps
-            let st = js.state();
 
             horizon.write().unwrap().set(pitch, roll, 120.0);
             drone_yaw.write().unwrap().set(angle);
-            angle += 0.1;
+            angle += drone.turn_clockwise;
 
             // if st.a() {
             //     light_signal.write().unwrap().timestamp(utils::now_msecs);
             // }
 
-            let rb = st.button_clicked(gamepad::Buttons::RB, &last_state);
-            let lb = st.button_clicked(gamepad::Buttons::LB, &last_state);
-            if rb {
-                sensitivity.write().unwrap().inc();
-            }
-            if lb {
-                sensitivity.write().unwrap().dec();
-            }
-            let sensitivity_valye = sensitivity.read().unwrap().get();
+            sensitivity.write().unwrap().set(drone.sensitivity);
 
-            let ls = st.l_stick(sensitivity_valye);
-            let rs = st.r_stick(sensitivity_valye);
-            let lt = st.lt(sensitivity_valye);
-            let rt = st.rt(sensitivity_valye);
+            let ls = (
+                drone.slide_right * drone.sensitivity,
+                drone.forward * drone.sensitivity,
+            );
+            let rs = (drone.turn_clockwise * drone.sensitivity, 0.0);
 
-            let horiz = st.horiz();
-            let x_clicked = st.button_clicked(gamepad::Buttons::X, &last_state);
-            if x_clicked {
+            if drone.img_carousel_toggle_zoom {
                 image_carousel.write().unwrap().toggle_show();
             }
-            if horiz < 0.0 {
+            if drone.img_carousel_left {
                 image_carousel.write().unwrap().turn_left();
             }
-            if horiz > 0.0 {
+            if drone.img_carousel_right {
                 image_carousel.write().unwrap().turn_right();
             }
             pitch += ls.1;
             roll += rs.0;
-            let vert_speed = lt - rt;
+            let vert_speed = (drone.vert_accel - drone.vert_decel) * drone.sensitivity;
             vert_thrust.write().unwrap().set(vert_speed);
 
             left_stick.write().unwrap().set_stick(ls);
             right_stick.write().unwrap().set_stick(rs);
 
+            drone.zero_state();
+
             win.draw(&mut canvas);
             // self.draw(&mut canvas, &mut texture);
             canvas.present();
             sdl::sdl_maintain_fps(start, win.fps);
-            last_state = st;
+        }
+    }
+}
+
+#[derive(Debug)]
+struct DroneHandling {
+    take_picture: bool,
+    toggle_video: bool,
+    take_off: bool,
+    hover: bool,
+    sensitivity: f32,
+    vert_accel: f32,
+    vert_decel: f32,
+    slide_right: f32,
+    forward: f32,
+    turn_clockwise: f32,
+    img_carousel_left: bool,
+    img_carousel_right: bool,
+    img_carousel_toggle_zoom: bool,
+}
+
+impl DroneHandling {
+    pub fn zero_state(&mut self) {
+        self.take_off = false;
+        self.hover = false;
+        self.toggle_video = false;
+        self.img_carousel_toggle_zoom = false;
+        self.img_carousel_left = false;
+        self.img_carousel_right = false;
+    }
+
+    pub fn drone_handler(&mut self, event_pump: &mut EventPump) -> bool {
+        tracing::info!("running drone event");
+        for event in event_pump.poll_iter() {
+            tracing::info!("events={:?}", event);
+            match event {
+                Event::ControllerButtonUp { button, .. } => {
+                    tracing::info!("Button {:?} up", button);
+                    match button {
+                        sdl2::controller::Button::A => self.take_picture = true,
+                        sdl2::controller::Button::B => self.toggle_video = true,
+                        sdl2::controller::Button::X => self.img_carousel_toggle_zoom = true,
+
+                        sdl2::controller::Button::Guide => self.hover = true,
+                        sdl2::controller::Button::Start => self.take_off = true,
+
+                        sdl2::controller::Button::LeftShoulder => self.sensitivity -= 0.2,
+                        sdl2::controller::Button::RightShoulder => self.sensitivity += 0.2,
+                        sdl2::controller::Button::DPadLeft => self.img_carousel_left = true,
+                        sdl2::controller::Button::DPadRight => self.img_carousel_right = true,
+                        _ => {}
+                    }
+                }
+
+                Event::ControllerAxisMotion {
+                    axis, value: val, ..
+                } => {
+                    // Axis motion is an absolute value in the range
+                    // [-32768, 32767]. Let's simulate a very rough dead
+                    // zone to ignore spurious events.
+                    // let dead_zone = 10_000;
+                    // if val > dead_zone || val < -dead_zone {
+                    tracing::info!("Axis {:?} moved to {}", axis, val);
+                    match axis {
+                        Axis::LeftX => self.slide_right = val as f32 / 32767.0,
+                        Axis::LeftY => self.forward = val as f32 / 32767.0,
+                        Axis::RightX => self.turn_clockwise = val as f32 / 32767.0,
+                        Axis::TriggerRight => self.vert_accel = val as f32 / 32767.0,
+                        Axis::TriggerLeft => self.vert_decel = val as f32 / 32767.0,
+                        _ => {}
+                    }
+                    // }
+                }
+
+                sdl2::event::Event::Quit { .. } => {
+                    return true;
+                }
+                sdl2::event::Event::KeyDown {
+                    keycode: Some(sdl2::keyboard::Keycode::Escape),
+                    ..
+                } => {
+                    return true;
+                }
+
+                _ => {}
+            }
+        }
+        false
+    }
+}
+
+impl Default for DroneHandling {
+    fn default() -> Self {
+        Self {
+            take_off: false,
+            hover: false,
+            take_picture: false,
+            toggle_video: false,
+            img_carousel_left: false,
+            img_carousel_right: false,
+            img_carousel_toggle_zoom: false,
+            sensitivity: 0.2,
+            vert_accel: Default::default(),
+            vert_decel: Default::default(),
+            slide_right: Default::default(),
+            forward: Default::default(),
+            turn_clockwise: Default::default(),
         }
     }
 }

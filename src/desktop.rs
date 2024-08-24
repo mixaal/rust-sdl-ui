@@ -13,6 +13,7 @@ use crate::{
     video::{StreamAction, VideoStreamDecoder},
 };
 use sdl2::{
+    controller::GameController,
     gfx::primitives::DrawRenderer,
     pixels::Color,
     rect::Rect,
@@ -34,11 +35,17 @@ pub struct Window {
     pub height: u32,
     pub event_pump: sdl2::EventPump,
     pub ttf: sdl2::ttf::Sdl2TtfContext,
+    pub controller: Option<GameController>,
 }
 
 impl Window {
-    pub fn new(width: u32, height: u32, fps: u32) -> (Self, Canvas<sdl2::video::Window>) {
-        let (event_pump, canvas) = sdl::sdl_init(width, height);
+    pub fn new(
+        width: u32,
+        height: u32,
+        fps: u32,
+        gamepad: bool,
+    ) -> (Self, Canvas<sdl2::video::Window>) {
+        let (event_pump, canvas, controller) = sdl::sdl_init(width, height, gamepad);
         let ttf = sdl2::ttf::init().expect("can't setup ttf context");
         (
             Self {
@@ -48,6 +55,7 @@ impl Window {
                 fps,
                 event_pump,
                 ttf,
+                controller,
             },
             canvas,
         )
