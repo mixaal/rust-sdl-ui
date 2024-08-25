@@ -63,6 +63,15 @@ fn main() {
     )
     .on_window(&mut win, rx);
 
+    let text = desktop::TextWidget::new(
+        desktop::CommonWidgetProps::new(&canvas)
+            .place(0.5, 0.5)
+            .size(0.4, 0.2),
+    )
+    .on_window(&mut win);
+
+    text.write().unwrap().set("hello".to_owned());
+
     let sensitivity = desktop::HorizSliderWidget::new(
         desktop::CommonWidgetProps::new(&canvas)
             .place(0.2, 0.5)

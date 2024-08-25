@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     color::{self, RgbColor},
-    sdl::{self},
+    sdl::{self, sdl_scale_text},
     texcache::TextureCache,
     utils,
     video::{StreamAction, VideoStreamDecoder},
@@ -199,6 +199,36 @@ impl CommonWidgetProps {
     }
 }
 
+pub struct TextWidget {
+    widget: CommonWidgetProps,
+    props: Arc<RwLock<Text>>,
+}
+
+impl TextWidget {
+    pub fn new(widget: CommonWidgetProps) -> Self {
+        Self {
+            widget: widget.textures(vec!["images/joy.png", "images/joy-stick.png"]),
+            props: Arc::new(RwLock::new(Text {
+                value: "".to_owned(),
+            })),
+        }
+    }
+
+    pub fn on_window(self, window: &mut Window) -> Arc<RwLock<Text>> {
+        let hz = self.props.clone();
+        window.widgets.push(Box::new(self));
+        hz
+    }
+}
+
+impl Widget for TextWidget {
+    fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
+        let (x, y, w, h) = self.widget.compute_dim(canvas);
+        let text = &self.props.read().unwrap().value;
+        sdl_scale_text(ttf, canvas, text, 48, color::WHITE.clone(), x, y, w, h);
+    }
+}
+
 pub struct GamepadStickWidget {
     widget: CommonWidgetProps,
     props: Arc<RwLock<GamepadStick>>,
@@ -236,7 +266,8 @@ impl Widget for GamepadStickWidget {
         let xx = (x as f32 + horiz * w as f32) as i32;
         let yy = (y as f32 + vert * h as f32) as i32;
 
-        sdl::sdl_render_tex(canvas, &self.widget.textures[1], xx, yy);
+        let ww = (0.3 * w as f32) as i32;
+        sdl::sdl_scale_tex(canvas, &self.widget.textures[1], xx, yy, ww, ww);
     }
 }
 
@@ -772,7 +803,7 @@ pub struct ImageCarouselWidget {
 impl Widget for ImageCarouselWidget {
     fn draw(&mut self, canvas: &mut Canvas<SdlWin>, ttf: &mut Sdl2TtfContext) {
         let (x, y, w, h) = self.widget.compute_dim(canvas);
-        let zw = self.widget.canvas_width as f32 * 0.3;
+        let zw: f32 = self.widget.canvas_width as f32 * 0.7;
 
         let p = self.props.read().unwrap();
         let images_no = p.number_of_images;
@@ -966,6 +997,16 @@ impl FlightLogWidget {
         let hz = self.props.clone();
         window.widgets.push(Box::new(self));
         hz
+    }
+}
+
+pub struct Text {
+    value: String,
+}
+
+impl Text {
+    pub fn set(&mut self, value: String) {
+        self.value = value;
     }
 }
 

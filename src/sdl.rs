@@ -150,7 +150,7 @@ pub fn sdl_clear(canvas: &mut Canvas<Window>, r: u8, g: u8, b: u8) {
     canvas.clear();
 }
 
-pub fn sdl_text(
+fn text2tex(
     ttf: &mut sdl2::ttf::Sdl2TtfContext,
     canvas: &mut Canvas<Window>,
     text: &str,
@@ -158,14 +158,14 @@ pub fn sdl_text(
     color: RgbColor,
     x: i32,
     y: i32,
-) {
+) -> Option<Texture> {
     let mut fsize = font_size;
     if fsize == 0 {
         fsize = 24;
     }
     let font = ttf.load_font(FONT_PATH.clone(), fsize);
     if font.is_err() {
-        return;
+        return None;
     }
 
     let tc = canvas.texture_creator();
@@ -175,15 +175,45 @@ pub fn sdl_text(
     //font.set_style(sdl2::ttf::FontStyle::BOLD);
     let surface = font.render(text).blended(color.to_sdl_rgba());
     if surface.is_err() {
-        return;
+        return None;
     }
     let surface = surface.unwrap();
     let texture = tc.create_texture_from_surface(&surface);
     if texture.is_err() {
-        return;
+        return None;
     }
     let texture = texture.unwrap();
-    sdl_render_tex(canvas, &texture, x, y);
+    Some(texture)
+}
+
+pub fn sdl_text(
+    ttf: &mut sdl2::ttf::Sdl2TtfContext,
+    canvas: &mut Canvas<Window>,
+    text: &str,
+    font_size: u16,
+    color: RgbColor,
+    x: i32,
+    y: i32,
+) {
+    if let Some(texture) = text2tex(ttf, canvas, text, font_size, color, x, y) {
+        sdl_render_tex(canvas, &texture, x, y);
+    }
+}
+
+pub fn sdl_scale_text(
+    ttf: &mut sdl2::ttf::Sdl2TtfContext,
+    canvas: &mut Canvas<Window>,
+    text: &str,
+    font_size: u16,
+    color: RgbColor,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+) {
+    if let Some(texture) = text2tex(ttf, canvas, text, font_size, color, x, y) {
+        sdl_scale_tex(canvas, &texture, x, y, w, h);
+    }
 }
 
 pub fn sdl_maintain_fps(start: Instant, fps: u32) {
