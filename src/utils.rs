@@ -1,6 +1,13 @@
 // use crate::gfx::color::RgbColor;
 
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::{
+    env,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
+
+pub(crate) fn get_env(name: &str, default_value: &str) -> String {
+    env::var(name).unwrap_or(default_value.to_owned())
+}
 
 pub(crate) fn clamp(x: f32) -> f32 {
     if x < 0.0 {

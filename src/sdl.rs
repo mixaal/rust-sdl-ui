@@ -10,7 +10,15 @@ use sdl2::{
     EventPump, Sdl,
 };
 
+use crate::utils;
+
 use super::color::RgbColor;
+lazy_static! {
+    static ref FONT_PATH: String = utils::get_env(
+        "SDL_UI_FONT",
+        "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf"
+    );
+}
 
 pub fn sdl_init(
     width: u32,
@@ -149,7 +157,7 @@ pub fn sdl_text(
     if fsize == 0 {
         fsize = 24;
     }
-    let font = ttf.load_font("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", fsize);
+    let font = ttf.load_font(FONT_PATH.clone(), fsize);
     if font.is_err() {
         return;
     }
