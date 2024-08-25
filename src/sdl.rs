@@ -24,7 +24,7 @@ pub fn sdl_init(
     width: u32,
     height: u32,
     gamepad: bool,
-) -> (EventPump, Canvas<Window>, Option<GameController>) {
+) -> (EventPump, Canvas<Window>, Option<GameController>, u32, u32) {
     let sdl_context = sdl2::init().unwrap();
 
     let mut controller = None;
@@ -36,26 +36,32 @@ pub fn sdl_init(
             controller = Some(r.unwrap());
         }
     }
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    // for event in event_pump.wait_iter() {
-    //     println!("evcen={:?}", event);
-    // }
+    let event_pump = sdl_context.event_pump().unwrap();
 
     let video_subsystem = sdl_context.video().unwrap();
 
+    let (w, h) = if let Ok(video_mode) = video_subsystem.current_display_mode(0) {
+        (video_mode.w as u32, video_mode.h as u32)
+    } else {
+        (width, height)
+    };
+    tracing::info!("Using video mode {w}x{h}");
+
     let window = video_subsystem
         .window("Rustvaders", width, height)
-        .fullscreen()
+        .fullscreen_desktop()
         .position_centered()
         .build()
         .expect("could not initialize video subsystem");
 
+    let border_size = window.drawable_size();
     let canvas = window
         .into_canvas()
         .build()
         .expect("could not make a canvas");
 
-    (event_pump, canvas, controller)
+    tracing::info!("border_size={:?}", border_size);
+    (event_pump, canvas, controller, border_size.0, border_size.1)
 }
 
 pub fn sdl_joy_init(sdl_context: Sdl) -> Result<GameController, String> {

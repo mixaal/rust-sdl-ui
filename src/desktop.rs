@@ -45,13 +45,14 @@ impl Window {
         fps: u32,
         gamepad: bool,
     ) -> (Self, Canvas<sdl2::video::Window>) {
-        let (event_pump, canvas, controller) = sdl::sdl_init(width, height, gamepad);
+        let (event_pump, canvas, controller, real_width, real_height) =
+            sdl::sdl_init(width, height, gamepad);
         let ttf = sdl2::ttf::init().expect("can't setup ttf context");
         (
             Self {
                 widgets: Vec::new(),
-                width,
-                height,
+                width: real_width,
+                height: real_height,
                 fps,
                 event_pump,
                 ttf,
