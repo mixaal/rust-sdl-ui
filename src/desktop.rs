@@ -1010,8 +1010,8 @@ impl Text {
 }
 
 pub struct VideoDecoder {
-    rgb: Arc<RwLock<Vec<u8>>>,
-    skip_frames: usize,
+    pub rgb: Arc<RwLock<Vec<u8>>>,
+    pub skip_frames: usize,
 }
 
 pub struct Video {
