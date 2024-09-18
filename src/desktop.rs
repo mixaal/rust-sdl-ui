@@ -521,12 +521,11 @@ impl VideoWidget {
         }
     }
 
-    pub fn on_window(self, window: &mut Window, rx: Receiver<Vec<u8>>) -> Arc<RwLock<Video>> {
-        let hz = self.props.clone();
+    pub fn on_window(self, window: &mut Window, rx: Receiver<Vec<u8>>) -> Arc<VideoDecoder> {
+        let hz = self.inner_decoder.clone();
         let inner = self.inner_decoder.clone();
         thread::spawn(move || inner.decode_video(rx));
         window.widgets.push(Box::new(self));
-
         hz
     }
 }
@@ -1010,7 +1009,7 @@ impl Text {
     }
 }
 
-struct VideoDecoder {
+pub struct VideoDecoder {
     rgb: Arc<RwLock<Vec<u8>>>,
     skip_frames: usize,
 }
