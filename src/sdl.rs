@@ -10,7 +10,7 @@ use sdl2::{
     EventPump, Sdl,
 };
 
-use crate::utils;
+use crate::{utils, vec::Vec4};
 
 use super::color::RgbColor;
 lazy_static! {
@@ -111,6 +111,37 @@ pub fn sdl_load_textures(canvas: &Canvas<Window>, images: Vec<String>) -> Vec<Te
         textures.push(tex);
     }
     textures
+}
+
+pub fn sdl_render_rect_with_caption(
+    canvas: &mut Canvas<Window>,
+    text: &str,
+    ttf: &mut sdl2::ttf::Sdl2TtfContext,
+    font_size: u16,
+    (x1, y1): (i32, i32),
+    (x2, y2): (i32, i32),
+    text_color: Vec4,
+    color: Vec4,
+) {
+    sdl_text(ttf, canvas, text, font_size, text_color, (x1 + x2) / 2, y1);
+    sdl_render_rect(canvas, (x1, y1), (x2, y2), color);
+}
+
+pub fn sdl_render_rect(
+    canvas: &mut Canvas<Window>,
+    (x1, y1): (i32, i32),
+    (x2, y2): (i32, i32),
+    color: Vec4,
+) {
+    if x1 > x2 {
+        return;
+    }
+    if y1 > y2 {
+        return;
+    }
+    canvas.set_draw_color(color.to_sdl_rgba());
+    let rect = Rect::new(x1, y1, (x2 - x1) as u32, (y2 - y1) as u32);
+    let _ = canvas.draw_rect(rect);
 }
 
 pub fn sdl_render_tex(canvas: &mut Canvas<Window>, texture: &Texture, x: i32, y: i32) {
