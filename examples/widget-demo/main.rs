@@ -152,6 +152,7 @@ fn main() {
             .on_window(&mut win);
 
     battery.write().unwrap().set(0.09);
+    // battery.write().unwrap().set(0.0);
     wifi_strength.write().unwrap().set(0.4);
 
     sensitivity.write().unwrap().inc();

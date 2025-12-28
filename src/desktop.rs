@@ -561,12 +561,14 @@ impl Widget for BatteryStatusWidget {
         }
         let top_y = sy + ((1.0 - percentage) * h as f32) as i32;
         let bottom_y = sy + h - 3;
-        let _ = canvas.fill_rect(Rect::new(
-            sx + 3,
-            top_y,
-            w as u32 - 6,
-            (bottom_y - top_y) as u32,
-        ));
+        if top_y < bottom_y {
+            let _ = canvas.fill_rect(Rect::new(
+                sx + 3,
+                top_y,
+                w as u32 - 6,
+                (bottom_y - top_y) as u32,
+            ));
+        }
         let val = (percentage * 100.0) as i32;
         let text = format!("{val}%");
         sdl::sdl_text(ttf, canvas, &text, 24, color::WHITE.clone(), x, y);
